@@ -1,0 +1,13 @@
+# Create a fake serial port for processing serial_mqtt_gateway
+# Name should trigger "looks like an arduino (usb-serial)"
+# This creates 2 serial ports, bridged together, i.e. endpoints
+# /dev/ttyACM0 <-> /dev/fakearduino
+sudo socat -d -d -d  pty,raw,echo=0,link=/dev/ttyACM0,mode=666 pty,raw,echo=0,mode=666,link=/dev/fakearduino
+
+# send something to it:
+echo "something" > /dev/fakearduino
+
+# wait for output from it:
+cat < /dev/fakearduino
+
+# ought to be able to use screen I think?

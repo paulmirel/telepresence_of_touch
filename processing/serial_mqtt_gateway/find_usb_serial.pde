@@ -10,7 +10,7 @@ Serial connectUSBSerial(int baud) {
     if (
       // guess, based on historical names of ports
       // We are taking the first 1
-      flipDotPorts[i].contains("ACM") // windows
+      flipDotPorts[i].contains("ACM") // linux more fully: /dev/ttyACM0
       || flipDotPorts[i].contains("cu.usbmodem") // mac
       || flipDotPorts[i].contains("tty. usbmodem") // linux
       ) { 

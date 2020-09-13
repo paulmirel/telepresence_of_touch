@@ -14,22 +14,36 @@ void setup() {
   textSize(24);
   fill(0);
   text("Started", 100, 100);
-  
-  arduino = connectUSBSerial(57600);
+
+  setup_arduino_serial();
   setup_mqtt();
 }
 
 void draw() {
-  delay(500);
 }
 
+// ----
+void setup_arduino_serial() {
+  arduino = connectUSBSerial(57600);
+  arduino.bufferUntil(13);
+}
+
+void serialEvent(Serial p) {
+  // assumes only the one serial-port
+  String arduino_input = arduino.readString();
+  print("Serial: ");
+  print(arduino_input);
+  print("\n");
+  mqtt.publish("awgrover/arduino", arduino_input );
+}
+
+// ----
 void setup_mqtt() {
   mqtt = new MQTTClient(this); // must be this for callbacks or listener class
   print("Will connect...\n");
   // FIXME: this blocks. timeout and retry?
   mqtt.connect("mqtt://localhost:1883"); // no client-id on purpose
   mqtt.publish("awgrover/hello", "test");
-  
 }
 
 void clientConnected() {
@@ -66,6 +80,7 @@ void messageReceived(String topic, byte[] b_payload) {
   print(topic);
   if ( json_payload != null ) {
     print(" (json) ");
+    // .getString("key", null); // won't throw
   } else {
     // wasn't a json dicationary
     print(" (string) ");
