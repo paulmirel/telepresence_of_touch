@@ -1,0 +1,13 @@
+# Detailed mosquitto activity
+mosquitto -v # drop the -v for less detailed, use -d for daemon
+
+# Monitor connections
+mosquitto_sub -v -p 1883 -t '$SYS/broker/subscriptions/#'   -t '$SYS/broker/clients/#'
+
+# demo subscribe
+mosquitto_sub -p 1883 -t 'awgrover/#'
+
+# demo publish
+mosquitto_pub -p 1883 -t 'awgrover/hello' -m '{"a":1}'
+mosquitto_pub -p 1883 -t 'awgrover/hello' -m 'bob'
+
