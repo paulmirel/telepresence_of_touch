@@ -6,6 +6,9 @@
 import mqtt.*;
 MQTTClient mqtt; // single server
 Boolean mqtt_connected = false;
+String payload;
+JSONObject json_payload;
+
 Serial arduino;
 String arduino_input;
 
@@ -19,6 +22,7 @@ void setup() {
 
   setup_arduino_serial(); // fixme: retry if serial lost
   // FIXME: wrap EVERYTHING with catch, close serial
+  // maybe override PApplet.handleDraw & wrap
   setup_mqtt();
 }
 
@@ -26,6 +30,7 @@ void draw() {
   if ( arduino_input != null ) {
     process_arduino_input();
   }
+  process_arduino_output();
 }
 
 void debug_str_to_hex(String x) {
@@ -56,7 +61,7 @@ void serialEvent(Serial p) {
   // so remove it
   arduino_input = arduino.readString();
   arduino_input = arduino_input.substring(0, arduino_input.length()-1 );
-  
+
   print("Serial: ");
   print(arduino_input);
   print("\n");
@@ -70,10 +75,12 @@ void process_arduino_input() {
       String url = arduino_input.replace("mqtt: connect ", "");
       //url = "mqtt://localhost:1883";
       print("Will connect '" + url + "'\n");
-      debug_str_to_hex(url);
+      //debug_str_to_hex(url);
       // FIXME: this blocks. timeout and retry?
       mqtt.connect(url); // no client-id on purpose
       mqtt_connected = true;
+
+      //
     } else if (arduino_input.startsWith("mqtt: publish ") ) {
       if (mqtt_connected) {
         // FIXME validate the json, or at least warn if it is not
@@ -111,8 +118,8 @@ void connectionLost() {
 
 void messageReceived(String topic, byte[] b_payload) {
   // We expect a String...
-  String payload = new String(b_payload);
-  JSONObject json_payload = null;
+  payload = new String(b_payload);
+  json_payload = null;
   // Which is a json dictionary...
   try {
     json_payload = parseJSONObject(payload); // null if not json
@@ -135,4 +142,23 @@ void messageReceived(String topic, byte[] b_payload) {
   print(" : ");
   print(payload);
   print("\n");
+}
+
+void process_arduino_output() {
+  if ( arduino != null ) {
+    if (json_payload != null ) {
+      // send:
+      // { "mqtt-message" : thepayload }
+      // Look for {, and parseable json & has mqtt key
+      // we can can just pass the payload!
+      arduino.write( "mqtt: message ");
+      arduino.write( payload );
+      arduino.write("\r");
+    } else if ( payload != null ) {
+      // ignore non-json for now
+      println("discarded (not json)");
+    }
+    json_payload = null; // done with it
+    payload = null; // done with it
+  }
 }
