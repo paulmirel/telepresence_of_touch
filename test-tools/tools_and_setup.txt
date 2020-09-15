@@ -21,7 +21,7 @@ mosquitto_pub -p 1883 -t 'awgrover/hello' -m 'bob'
     /dev/ttyACM0 <-> /dev/fakearduino
 sudo socat -d -d -d  pty,raw,echo=0,link=/dev/ttyACM0,mode=666 pty,raw,echo=0,mode=666,link=/dev/fakearduino
 
-## send something to it:
+## send something to it, as if the arduino:
 printf "something\r" > /dev/fakearduino
 
 ## wait for output from it:
@@ -30,4 +30,4 @@ cat < /dev/fakearduino
 ## use screen for "interactive"
 screen /dev/fakearduino 115200
     note that screen will send cr/lf
-    And, i have to restart socat if I quit from screen
+    And, I have to restart socat if I quit from screen
