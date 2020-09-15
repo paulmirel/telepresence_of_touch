@@ -27,4 +27,7 @@ printf "something\r" > /dev/fakearduino
 ## wait for output from it:
 cat < /dev/fakearduino
 
-# ought to be able to use screen I think?
+## use screen for "interactive"
+screen /dev/fakearduino 115200
+    note that screen will send cr/lf
+    And, i have to restart socat if I quit from screen

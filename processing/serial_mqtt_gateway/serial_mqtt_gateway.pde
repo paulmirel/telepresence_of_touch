@@ -1,11 +1,13 @@
 /* //<>// //<>//
-Install mqtt:
+ Install mqtt:
  Sketch::Import Library::Add Library, processing-mqtt, install
  */
 
 import mqtt.*;
 MQTTClient mqtt; // single server
+Boolean mqtt_connected = false;
 Serial arduino;
+String arduino_input;
 
 void setup() {
   print("Started\n");
@@ -15,13 +17,32 @@ void setup() {
   fill(0);
   text("Started", 100, 100);
 
-  setup_arduino_serial();
+  setup_arduino_serial(); // fixme: retry if serial lost
+  // FIXME: wrap EVERYTHING with catch, close serial
   setup_mqtt();
 }
 
 void draw() {
+  if ( arduino_input != null ) {
+    process_arduino_input();
+  }
 }
 
+void debug_str_to_hex(String x) {
+  int ct = 0;
+  for ( int i : x.toCharArray()) {
+    print( hex(i), "" );
+    if (ct > 0 && ( (ct+1) % 8 == 0) ) {
+      print( x.substring(ct-7, ct) );
+      println();
+    }
+    ct += 1;
+  }
+  if ( !((ct+1) % 8 == 0) ) {
+    print( x.substring(ct-7, ct) );
+    println();
+  }
+}
 // ----
 void setup_arduino_serial() {
   arduino = connectUSBSerial(57600);
@@ -30,20 +51,46 @@ void setup_arduino_serial() {
 
 void serialEvent(Serial p) {
   // assumes only the one serial-port
-  String arduino_input = arduino.readString();
+
+  // will get trailing \r
+  // so remove it
+  arduino_input = arduino.readString();
+  arduino_input = arduino_input.substring(0, arduino_input.length()-1 );
+  
   print("Serial: ");
   print(arduino_input);
   print("\n");
-  mqtt.publish("awgrover/arduino", arduino_input );
+}
+
+void process_arduino_input() {
+
+  if ( arduino_input.startsWith("mqtt: ") ) {
+    if (arduino_input.startsWith("mqtt: connect ")) {
+      // mqtt: connect mqtt://x@x:some.host.wat:1883
+      String url = arduino_input.replace("mqtt: connect ", "");
+      //url = "mqtt://localhost:1883";
+      print("Will connect '" + url + "'\n");
+      debug_str_to_hex(url);
+      // FIXME: this blocks. timeout and retry?
+      mqtt.connect(url); // no client-id on purpose
+      mqtt_connected = true;
+    } else if (arduino_input.startsWith("mqtt: publish ") ) {
+      if (mqtt_connected) {
+        // FIXME validate the json, or at least warn if it is not
+        mqtt.publish("awgrover/arduino", arduino_input.replace("mqtt: publish ", "") );
+      } else {
+        print("MQTT: not connected!");
+      }
+    }
+  } else {
+    // debug, leave it
+  }
+  arduino_input = null;
 }
 
 // ----
 void setup_mqtt() {
   mqtt = new MQTTClient(this); // must be this for callbacks or listener class
-  print("Will connect...\n");
-  // FIXME: this blocks. timeout and retry?
-  mqtt.connect("mqtt://localhost:1883"); // no client-id on purpose
-  mqtt.publish("awgrover/hello", "test");
 }
 
 void clientConnected() {
@@ -76,7 +123,7 @@ void messageReceived(String topic, byte[] b_payload) {
     }
   }
 
-  print("Received: ");
+  print("MQTT Received: ");
   print(topic);
   if ( json_payload != null ) {
     print(" (json) ");
