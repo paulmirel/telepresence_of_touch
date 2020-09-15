@@ -6,8 +6,10 @@
 import mqtt.*;
 MQTTClient mqtt; // single server
 Boolean mqtt_connected = false;
-String payload;
-JSONObject json_payload;
+String mqtt_payload;
+JSONObject mqtt_json_payload;
+String mqtt_topic;
+ArrayList<String> mqtt_topic_list = new ArrayList<String>();;
 
 Serial arduino;
 String arduino_input;
@@ -88,6 +90,16 @@ void process_arduino_input() {
       } else {
         print("MQTT: not connected!");
       }
+    } else if (arduino_input.startsWith("mqtt: subscribe ") ) {
+      if (mqtt_connected) {
+        String topic = arduino_input.replace("mqtt: subscribe ", "");
+
+        mqtt.subscribe(topic);
+
+        mqtt_topic_list.add( topic ); // need to keep track for reconnect
+      } else {
+        print("MQTT: not connected!");
+      }
     }
   } else {
     // debug, leave it
@@ -107,7 +119,9 @@ void clientConnected() {
   // they will still be active,
   // If you don't subscribe in clientConnected(),
   // you'll no longer be subscribed upon lost/re-connect
-  mqtt.subscribe("awgrover/#");
+  for (String topic : mqtt_topic_list ) {
+    mqtt.subscribe(topic);
+  }
 }
 
 void connectionLost() {
@@ -117,12 +131,14 @@ void connectionLost() {
 }
 
 void messageReceived(String topic, byte[] b_payload) {
+  mqtt_topic = topic;
+
   // We expect a String...
-  payload = new String(b_payload);
-  json_payload = null;
+  mqtt_payload = new String(b_payload);
+  mqtt_json_payload = null;
   // Which is a json dictionary...
   try {
-    json_payload = parseJSONObject(payload); // null if not json
+    mqtt_json_payload = parseJSONObject(mqtt_payload); // null if not json
   }
   catch (RuntimeException e) {
     if ( ! e.getMessage().startsWith("A JSONObject text must begin with") ) {
@@ -132,7 +148,7 @@ void messageReceived(String topic, byte[] b_payload) {
 
   print("MQTT Received: ");
   print(topic);
-  if ( json_payload != null ) {
+  if ( mqtt_json_payload != null ) {
     print(" (json) ");
     // .getString("key", null); // won't throw
   } else {
@@ -140,25 +156,32 @@ void messageReceived(String topic, byte[] b_payload) {
     print(" (string) ");
   }
   print(" : ");
-  print(payload);
+  print(mqtt_payload);
   print("\n");
 }
 
 void process_arduino_output() {
-  if ( arduino != null ) {
-    if (json_payload != null ) {
+
+  if ( arduino != null && mqtt_topic != null) {
+    JSONObject serial_message = new JSONObject();
+    serial_message.setString("topic", mqtt_topic);
+
+    if (mqtt_json_payload != null ) {
       // send:
-      // { "mqtt-message" : thepayload }
-      // Look for {, and parseable json & has mqtt key
-      // we can can just pass the payload!
-      arduino.write( "mqtt: message ");
-      arduino.write( payload );
-      arduino.write("\r");
-    } else if ( payload != null ) {
-      // ignore non-json for now
-      println("discarded (not json)");
+      serial_message.setJSONObject("payload", mqtt_json_payload );
+    } else if ( mqtt_payload != null ) {
+      serial_message.setString("payload", mqtt_payload );
     }
-    json_payload = null; // done with it
-    payload = null; // done with it
+
+    // so typical, processing ALWAYS does multi-line pretty-format
+    String compact = serial_message.format(0);
+    compact = compact.replaceAll("\n", ""); // Danger, may whack \n in real data
+    arduino.write("mqtt: message ");
+    arduino.write( compact );
+    arduino.write("\r");
+
+    mqtt_topic = null;
+    mqtt_json_payload = null; // done with it
+    mqtt_payload = null; // done with it
   }
 }
