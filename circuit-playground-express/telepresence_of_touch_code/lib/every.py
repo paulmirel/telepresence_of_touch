@@ -26,7 +26,7 @@ class Every(object):
         """
         # states are -1,0,1
         self.interval = interval
-        self.last = time.monotonic()
+        self.last = time.monotonic() - interval # start immediatly
 
     def __call__(self):
         now = time.monotonic()

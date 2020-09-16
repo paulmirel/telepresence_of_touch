@@ -15,8 +15,12 @@ light_color = ( 255, 0, 0 )
 OFF = ( 0, 0, 0 )
 
 every_tenth = Every(0.1)
+heartbeat = Every(3)
 
 while True:
+    if heartbeat():
+        print("heartbeat ", time.monotonic())
+
     if every_tenth():
         output = ""
         # touch near pixel 1, between A4 and A5
