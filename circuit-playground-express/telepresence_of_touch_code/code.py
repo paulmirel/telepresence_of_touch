@@ -1,6 +1,9 @@
 # telepresence_of_touch
 # Paul Mirel and Alan Grover for MICA Maryland Institute College of Art
 # 20200909
+#
+# "cp" api docs: https://circuitpython.readthedocs.io/projects/circuitplayground/en/latest/api.html
+# circuitpython api docs: https://circuitpython.readthedocs.io/en/latest/shared-bindings/index.html
 
 from adafruit_circuitplayground import cp
 import time
@@ -17,9 +20,13 @@ OFF = ( 0, 0, 0 )
 every_tenth = Every(0.1)
 heartbeat = Every(3)
 
+# startup
+cp.red_led = False # because heartbeat turns it on immediately
+
 while True:
     if heartbeat():
         print("heartbeat ", time.monotonic())
+        cp.red_led = not cp.red_led
 
     if every_tenth():
         output = ""
