@@ -81,11 +81,13 @@ void process_arduino_input() {
       // FIXME: this blocks. timeout and retry?
       mqtt.connect(url); // no client-id on purpose
       mqtt_connected = true;
+      arduino.write("mqtt: connnected\r")
 
       //
     } else if (arduino_input.startsWith("mqtt: publish ") ) {
       if (mqtt_connected) {
         // FIXME validate the json, or at least warn if it is not
+        // FIXME: split out the topic!
         mqtt.publish("awgrover/arduino", arduino_input.replace("mqtt: publish ", "") );
       } else {
         print("MQTT: not connected!");
