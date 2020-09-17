@@ -23,12 +23,24 @@ every_hundreth = Every(0.01)
 heartbeat = Every(3)
 every_update_remote = Every(0.3)
 
+def do_subscriptions():
+    # what topics do we want to listen to?
+    mqtt.subscribe("awgrover/#")
+
+def do_message(client, topic, message):
+    # client is the SerialMQTT instance
+    # message is:
+    print("mqtt seen:",topic,message)
+    
 # startup
 cp.red_led = False # because heartbeat turns it on immediately
+mqtt.on_connect = do_subscriptions
+mqtt.on_message = do_message
 mqtt.connect()
 
 last_message = {}
 message = {}
+
 
 while True:
     if heartbeat():
@@ -78,6 +90,7 @@ while True:
         changes = { k : message[k] for k, _ in set(message.items()) - set(last_message.items()) }
         if changes:
             print( " ", changes )
+            mqtt.publish("awgrover/touch", changes)
             last_message = message.copy() # remember the last change
 
 

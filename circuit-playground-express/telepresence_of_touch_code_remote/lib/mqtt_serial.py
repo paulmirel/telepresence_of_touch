@@ -46,11 +46,15 @@ class SerialMQTT:
         print("mqtt: subscribe " + topic)
 
     def publish(self, topic, message): # qos=0
-        print("mqtt: publish " + topic, end = "")
-        if isinstance(message, Dict):
-            print( ujson.dumps(message) )
+        if self.state  == self.State.CONNECTED:
+            print("mqtt: publish " + topic, end = " ")
+            if isinstance(message, dict):
+                print( message ) # FIXME: ujson.dumps(message) )
+            else:
+                print( message )
         else:
-            print( message )
+            print("debugmqtt not connected tried to publish",topic,message)
+            
 
 
     def run(self):
@@ -97,6 +101,15 @@ class SerialMQTT:
             self.recvbuffer = ""
             return None
 
+        if self.recvbuffer.startswith("mqtt: message "):
+            json = self.recvbuffer[ len("mqtt: message "): ]
+            # { "topic":$s, "payload" : string|dict }
+            mqtt_packet = eval(json) # FIXME: not safe. ujson.loads(json)
+            if self.on_message:
+                self.on_message( self, mqtt_packet['topic'], mqtt_packet['payload'] )
+            else:
+                print("debugmqtt no on_message:", json)
+            
         # Not an mqtt: message
         else:
             print("debugmqtt not mqtt:")
