@@ -16,6 +16,7 @@ while(True):
 
 import supervisor
 import sys
+import time
 
 class SerialMQTT:
 
@@ -34,10 +35,12 @@ class SerialMQTT:
         self.on_message = None
         self.recvbuffer = ""
         self.state = self.State.DISCONNECTED
+        self.connect_timeout = 0
 
     def connect(self): # assume clean_session, non-blocking
         print("mqtt: connect " + self.broker)
         self.state = self.State.WAIT_FOR_CONNECT
+        self.connect_timeout = time.monotonic() + 3 # retry every second
 
     def is_connected(self):
         return self.state == self.State.CONNECTED
@@ -78,12 +81,19 @@ class SerialMQTT:
                     # i.e. do the right thing for a CRLF sequence
                     continue
                 else:
-                    print("GOT " + self.recvbuffer)
+                    print("GOT '" + self.recvbuffer + "'")
                     received = True
             else:
                 self.recvbuffer = self.recvbuffer + next_char
 
+        # did we get a message?
         if not received:
+            # initial connect depends on the processing side listening, so retry
+            if self.state == self.State.WAIT_FOR_CONNECT and self.connect_timeout > time.monotonic():
+                # if supervisor.runtime.serial_connected: # doesn't seem to work
+                print("debugmqtt: retry connect")
+                self.connect()
+
             return None
 
         # when we get a mqtt message:
@@ -95,16 +105,30 @@ class SerialMQTT:
                     print("debugmqtt saw connected, but no on_connect listener")
                 self.state = self.State.CONNECTED
             else:
-                print("debugmqtt connected, but alread", self.state)
-                
+                print("debugmqtt connected, but already @", self.state)
 
             self.recvbuffer = ""
             return None
 
-        if self.recvbuffer.startswith("mqtt: message "):
+        elif self.recvbuffer.startswith("mqtt: message "):
             json = self.recvbuffer[ len("mqtt: message "): ]
             # { "topic":$s, "payload" : string|dict }
-            mqtt_packet = eval(json) # FIXME: not safe. ujson.loads(json)
+
+            # FIXME: find a minimal json decoder
+            # I can't figure out why ujson isn't in circuitpython
+            # I looked at https://github.com/simplejson/simplejson,
+            #   but it uses several things that aren't in circuitpython
+            # might be adaptable (strip out the streaming part?) 
+            #   https://github.com/danielyule/naya/blob/master/naya/json.py
+
+            # DANGER: eval is unsafe. 
+            # A message sent to you can execute ANY code
+            # the attack surface is the CPE (boring), 
+            #   the usb-port, which is the usb-hardward/driver level (so vulnerabilities), 
+            #   and our "mqtt-serial" protocol, so they could send evil to other people (any mqtt broker!)
+
+            mqtt_packet = eval(json)
+
             if self.on_message:
                 self.on_message( self, mqtt_packet['topic'], mqtt_packet['payload'] )
             else:

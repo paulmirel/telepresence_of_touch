@@ -94,6 +94,9 @@ while True:
             last_message = message.copy() # remember the last change
 
 
+    # handle mqtt events
     other_message = mqtt.run()
+
+    # just echo any other text
     if other_message:
         print(other_message)

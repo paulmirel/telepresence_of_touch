@@ -9,7 +9,8 @@ Boolean mqtt_connected = false;
 String mqtt_payload;
 JSONObject mqtt_json_payload;
 String mqtt_topic;
-ArrayList<String> mqtt_topic_list = new ArrayList<String>();;
+ArrayList<String> mqtt_topic_list = new ArrayList<String>();
+;
 
 Serial arduino;
 String arduino_input;
@@ -22,10 +23,17 @@ void setup() {
   fill(0);
   text("Started", 100, 100);
 
-  setup_arduino_serial(); // fixme: retry if serial lost
-  // FIXME: wrap EVERYTHING with catch, close serial
-  // maybe override PApplet.handleDraw & wrap
-  setup_mqtt();
+  try {
+    setup_arduino_serial(); // fixme: retry if serial lost
+    // FIXME: wrap EVERYTHING with catch, close serial
+    // maybe override PApplet.handleDraw & wrap
+    setup_mqtt();
+  }
+  catch ( Exception e) {
+    if (arduino != null) {
+      arduino.stop();
+    }
+  }
 }
 
 void draw() {
@@ -59,14 +67,14 @@ void setup_arduino_serial() {
 void serialEvent(Serial p) {
   // assumes only the one serial-port
 
-  // will get trailing \r
-  // so remove it
-  arduino_input = arduino.readString();
-  arduino_input = arduino_input.substring(0, arduino_input.length()-1 );
+  if (p == arduino) {
+    // will get trailing \r
+    // so remove it
+    arduino_input = arduino.readString();
+    arduino_input = arduino_input.trim(); // substring(0, arduino_input.length()-1 );
 
-  print("Serial: ");
-  print(arduino_input);
-  print("\n");
+    // println("Serial:",arduino_input);
+  }
 }
 
 void process_arduino_input() {
@@ -74,17 +82,19 @@ void process_arduino_input() {
   if ( arduino_input.startsWith("mqtt: ") ) {
     if (arduino_input.startsWith("mqtt: connect ")) {
       // mqtt: connect mqtt://x@x:some.host.wat:1883
+      println( ">>", arduino_input );
       String url = arduino_input.replace("mqtt: connect ", "");
       //url = "mqtt://localhost:1883";
       print("Will connect '" + url + "'\n");
       //debug_str_to_hex(url);
       // FIXME: this blocks. timeout and retry?
+      // FIXME: can throw: RuntimeException: [MQTT] Failed to connect:: Connection lost
+      arduino_input = null;
       mqtt.connect(url); // no client-id on purpose
-      mqtt_connected = true;
-      arduino.write("mqtt: connnected\r")
 
       //
     } else if (arduino_input.startsWith("mqtt: publish ") ) {
+      println( ">>", arduino_input );
       if (mqtt_connected) {
         // FIXME validate the json, or at least warn if it is not
         // FIXME: split out the topic!
@@ -92,7 +102,10 @@ void process_arduino_input() {
       } else {
         print("MQTT: not connected!");
       }
+
+      //
     } else if (arduino_input.startsWith("mqtt: subscribe ") ) {
+      println( ">>", arduino_input );
       if (mqtt_connected) {
         String topic = arduino_input.replace("mqtt: subscribe ", "");
 
@@ -103,8 +116,10 @@ void process_arduino_input() {
         print("MQTT: not connected!");
       }
     }
+
+    //
   } else {
-    // debug, leave it
+    println( ">", arduino_input );
   }
   arduino_input = null;
 }
@@ -116,6 +131,10 @@ void setup_mqtt() {
 
 void clientConnected() {
   print( "MQTT Connected, listening\n" );
+  mqtt_connected = true;
+  arduino.write("mqtt: connected\r");
+
+
   // all subscribes should happen "in" clientConnected,
   // so when MQTTClient automatically re-connects,
   // they will still be active,
@@ -146,6 +165,12 @@ void messageReceived(String topic, byte[] b_payload) {
     if ( ! e.getMessage().startsWith("A JSONObject text must begin with") ) {
       throw(e);
     }
+
+    // FIXME: getting:
+    // java.lang.NullPointerException
+    // at mqtt.MQTTClient.disconnect(Unknown Source)
+    // :69
+    // at mqtt.MQTTClient.dispose(Unknown Source)
   }
 
   print("MQTT Received: ");
