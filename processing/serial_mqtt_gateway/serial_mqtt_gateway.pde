@@ -41,6 +41,9 @@ void draw() {
     process_arduino_input();
   }
   process_arduino_output();
+  
+  // FIXME: if we don't see heartbeat in ~3 seconds, send reset to cpe:
+  // ^c ^d
 }
 
 void debug_str_to_hex(String x) {
