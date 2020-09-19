@@ -89,7 +89,7 @@ class SerialMQTT:
         # did we get a message?
         if not received:
             # initial connect depends on the processing side listening, so retry
-            if self.state == self.State.WAIT_FOR_CONNECT and self.connect_timeout > time.monotonic():
+            if self.state == self.State.WAIT_FOR_CONNECT and self.connect_timeout <= time.monotonic():
                 # if supervisor.runtime.serial_connected: # doesn't seem to work
                 print("debugmqtt: retry connect")
                 self.connect()

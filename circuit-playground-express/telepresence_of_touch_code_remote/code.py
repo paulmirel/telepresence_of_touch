@@ -8,20 +8,8 @@
 from adafruit_circuitplayground import cp
 import time
 
-import sys
-sys.path.append('%PROJECT/lib')
 from every import Every
 from mqtt_serial import SerialMQTT
-
-cp.pixels.brightness = 0.6
-
-light_color = ( 255, 0, 0 )
-OFF = ( 0, 0, 0 )
-mqtt = SerialMQTT("mqtt://localhost:1883")
-
-every_hundreth = Every(0.01)
-heartbeat = Every(3)
-every_update_remote = Every(0.3)
 
 def do_subscriptions():
     # what topics do we want to listen to?
@@ -32,7 +20,20 @@ def do_message(client, topic, message):
     # message is:
     print("mqtt seen:",topic,message)
     
-# startup
+# Startup
+
+# We're using "Every":
+# will be true "every n seconds", non-blocking time.sleep()
+heartbeat = Every(3)
+
+cp.pixels.brightness = 0.4 # the LEDs are too bright
+every_update_touch = Every(0.01) # how often to check touch sensors
+light_color = ( 255, 0, 0 )
+OFF = ( 0, 0, 0 )
+
+mqtt = SerialMQTT("mqtt://localhost:1883")
+every_update_remote = Every(3) # how often to send complete state
+
 cp.red_led = False # because heartbeat turns it on immediately
 mqtt.on_connect = do_subscriptions
 mqtt.on_message = do_message
@@ -45,10 +46,10 @@ message = {}
 while True:
     if heartbeat():
         print("heartbeat ", time.monotonic())
-        cp.red_led = not cp.red_led
+        cp.red_led = not cp.red_led # clever "toggle", aka "blink"
 
     # we can react locally very fast: 0.01 sec
-    if every_hundreth():
+    if every_update_touch():
 
         # touch near pixel 1, between A4 and A5
         # use -or- for greater sensitivity to touch, use -and- for more localized sensitivity to touch
@@ -83,8 +84,10 @@ while True:
             cp.pixels[ 8 ] = OFF
             message['touch4'] = OFF
 
-    # We don't need to update the remote as often, maybe 3/sec
-    if every_update_remote():
+    if mqtt.is_connected:
+        # Possibly send messages if we are connected
+
+        # We can tell if anything has changed, so update on that
         # has anything changed?
         # if the message is different than the last message we sent
         changes = { k : message[k] for k, _ in set(message.items()) - set(last_message.items()) }
@@ -93,10 +96,14 @@ while True:
             mqtt.publish("awgrover/touch", changes)
             last_message = message.copy() # remember the last change
 
+        # in case a message got dropped, update every so often
+        # ensures our "changes" messages are synchronized
+        if every_update_remote():
+            mqtt.publish("awgrover/touch", message)
 
     # handle mqtt events
     other_message = mqtt.run()
 
-    # just echo any other text
+    # just echo any other text that came over the serial
     if other_message:
-        print(other_message)
+        print("Not understood:", other_message)
