@@ -4,60 +4,87 @@
 #
 # "cp" api docs: https://circuitpython.readthedocs.io/projects/circuitplayground/en/latest/api.html
 # circuitpython api docs: https://circuitpython.readthedocs.io/en/latest/shared-bindings/index.html
+#
+# If you see 
+#       MemoryError: memory allocation failed
+# then reset the CPE
 
-from adafruit_circuitplayground import cp
 import time
+import re
+import gc
 
+gc.collect()
+from adafruit_circuitplayground import cp
+
+gc.collect()
 from every import Every
-from mqtt_serial import SerialMQTT
+from unrvl_mqtt import UnrvlMQTT
 
-def do_subscriptions():
-    # what topics do we want to listen to?
-    for a_channel in MQTTSubscriptions:
-        mqtt.subscribe(a_channel)
+LastTouchPart = {}
 
-def do_message(client, topic, message):
-    # client is the SerialMQTT instance
-    # message is:
-    print("mqtt seen:",topic,message)
-    
-def update_touch(message):
+def update_touch(mqtt_message):
     # fill in the message to correspond to our touch
+    global LastTouchPart
+
+    # just our part
+    # might be a bunch of entries like
+    # { touch" : { 1 : [0,255,0], 2: [255,0,0], 3:[0,0,0] }
+    touch_part = {}
 
     # (fixme: what possible ways are there to "factor" this repetition?)
     # touch near pixel 1, between A4 and A5
     # use -or- for greater sensitivity to touch, use -and- for more localized sensitivity to touch
     if cp.touch_A4 or cp.touch_A5: 
-        cp.pixels[ 1 ] = light_color
-        mqtt_message['touch1'] = light_color # we'll send our color
+        cp.pixels[ 1 ] = LightColor
+        touch_part[1] = LightColor # we'll send our color
     else:
         cp.pixels[ 1 ] = OFF
-        mqtt_message['touch1'] = OFF
+        touch_part[1] = OFF
 
     # touch near pixel 3, between A6 and A7
     if cp.touch_A6 or cp.touch_A7:
-        cp.pixels[ 3 ] = light_color
-        mqtt_message['touch2'] = light_color
+        cp.pixels[ 3 ] = LightColor
+        touch_part[2] = LightColor
     else:
         cp.pixels[ 3 ] = OFF
-        mqtt_message['touch2'] = OFF
+        touch_part[2] = OFF
 
     # touch near pixel 6, between A0 and A1
     if cp.touch_A1: # cp.touch_A0 is not available in the cp library
-        cp.pixels[ 6 ] = light_color
-        mqtt_message['touch3'] = light_color
+        cp.pixels[ 6 ] = LightColor
+        touch_part[3] = LightColor
     else:
         cp.pixels[ 6 ] = OFF
-        mqtt_message['touch3'] = OFF
+        touch_part[3] = OFF
 
     # touch near pixel 8, between A2 and A3
     if cp.touch_A2 or cp.touch_A3:
-        cp.pixels[ 8 ] = light_color
-        mqtt_message['touch4'] = light_color
+        cp.pixels[ 8 ] = LightColor
+        touch_part[4] = LightColor
     else:
         cp.pixels[ 8 ] = OFF
-        mqtt_message['touch4'] = OFF
-# Startup
+        touch_part[4] = OFF
+
+    # we don't want to send anything if nothing has changed
+    if touch_part != LastTouchPart:
+        mqtt_message['touch'] = touch_part
+        LastTouchPart = touch_part # remember for next time
+    gc.collect()
+
+def do_touch_message( topic, key, value, full_message ):
+    # value looks like:
+    #   { 1: (0,0,0), 4: (255,0,0), ... }
+    # i.e. which "touch" and the desired color
+    #print("debugmqtt: handled",topic,"|",key,":",value," in ",full_message)
+    remote_to_local = [ 0, 0, 2, 5, 7 ] # map of touch # to local led
+    for which, color in value.items():
+        print('remote', which, color)
+        if color == (0,0,0):
+            cp.pixels[ remote_to_local[which] ] = OFF
+        else:
+            cp.pixels[ remote_to_local[which] ] = RemoteColor # ignore their color
+
+### Startup
 
 ## Heartbeat
 # We're using "Every":
@@ -68,31 +95,37 @@ cp.red_led = False # because heartbeat turns it on immediately
 ## Touch
 cp.pixels.brightness = 0.4 # the LEDs are too bright
 every_update_touch = Every(0.01) # how often to check touch sensors
-light_color = ( 255, 0, 0 )
+LightColor = ( 255, 0, 0 )
+RemoteColor = ( 0, 60, 60 )
 OFF = ( 0, 0, 0 )
 
 # MQTT (remote communication)
-# FIXME: factor to a unrvl_mqtt class
-mqtt = SerialMQTT("mqtt://localhost:1883")
-MQTTSubscriptions = [ 'awgrover/bob' ]
+unrvl_mqtt = UnrvlMQTT("mqtt://localhost:1883")
+# what channel do we want to listen to?
+unrvl_mqtt.subscribe(
+    "unrvl2020/awgrover",
+    {
+    # what do we want to do with each key:value
+    'touch' : do_touch_message
+    }
+)
+unrvl_mqtt.connect()
 MQTTPublishTo = 'awgrover/touch'
 
 # setup event handling
 every_update_remote = Every(3) # how often to send complete state
-mqtt.on_connect = do_subscriptions
-mqtt.on_message = do_message
-# this will trigger do_subscriptions, so, setup before this:
-mqtt.connect() # after .on_xxx's
-MQTTLastMessage = {}
+
+### Loop
+print("Free memory before loop",gc.mem_free())
 
 while True:
     # blink the plain LED (next to usb) slowly to indicate that we are running
     if heartbeat():
-        print("heartbeat ", time.monotonic())
+        #print("heartbeat free mermory", gc.mem_free(), time.monotonic())
         cp.red_led = not cp.red_led # clever "toggle", aka "blink"
 
     # Add key:value that the remote system should know about,
-    # e.g. mqtt_message['touch1'] = light_color
+    # e.g. mqtt_message['touch1'] = LightColor
     # The remote system has to know what to do with each "key"
     mqtt_message = {} # will be sent if anything changed
 
@@ -101,26 +134,12 @@ while True:
         # checks each touch pad, lights the led, adds to mqtt_message
         update_touch( mqtt_message )
 
-    if mqtt.is_connected():
-        # Possibly send messages if we are connected
-
-        # We can tell if anything has changed, so update on that
-        # has anything changed?
-        # if the message is different than the last message we sent
-        changes = { k : mqtt_message[k] for k, _ in set(mqtt_message.items()) - set(MQTTLastMessage.items()) }
-        if changes:
-            print( " ", changes )
-            mqtt.publish( MQTTPublishTo, changes)
-            MQTTLastMessage = mqtt_message.copy() # remember the last change
-
-        # in case a message got dropped, repeat the last full message 
-        # (not just changes)
-        # ensures our "changes" messages are synchronized
-        if every_update_remote():
-            mqtt.publish("awgrover/touch", MQTTLastMessage)
+    # if anything to send, do it
+    if mqtt_message:
+        unrvl_mqtt.publish("awgrover/touch", mqtt_message)
 
     # handle mqtt events
-    other_message = mqtt.run()
+    other_message = unrvl_mqtt.run()
 
     # just echo any other text that came over the serial
     if other_message:

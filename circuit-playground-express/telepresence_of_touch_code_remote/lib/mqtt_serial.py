@@ -57,11 +57,9 @@ class SerialMQTT:
                 print( message )
         else:
             print("debugmqtt not connected tried to publish",topic,message)
-            
-
 
     def run(self):
-        """ call this often to detect incoming messages. 
+        """ call this often to detect incoming MQTT stuff. 
             we return None if we consumed, else the unconsummed line
         """
         # fixme: pass in a string that you read, we'll say True if we consume it
@@ -131,6 +129,8 @@ class SerialMQTT:
                 mqtt_packet = eval(json)
             except SyntaxError as e:
                 print("debugmqtt: bad message, no json:",json)
+                print( e )
+                self.recvbuffer = ""
                 return None
 
             # do we have an event handler?
@@ -138,6 +138,7 @@ class SerialMQTT:
                 self.on_message( self, mqtt_packet['topic'], mqtt_packet['payload'] )
             else:
                 print("debugmqtt no on_message:", json)
+            self.recvbuffer = ""
             
         # Not an mqtt: message
         else:
