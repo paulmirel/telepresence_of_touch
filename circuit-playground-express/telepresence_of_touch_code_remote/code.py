@@ -7,7 +7,7 @@
 #
 # If you see 
 #       MemoryError: memory allocation failed
-# then reset the CPE
+# then just re-send the code.py, or reset the CPE
 
 import time
 import re
@@ -18,7 +18,9 @@ from adafruit_circuitplayground import cp
 
 gc.collect()
 from every import Every
+gc.collect()
 from unrvl_mqtt import UnrvlMQTT
+gc.collect()
 
 LastTouchPart = {}
 
