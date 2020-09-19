@@ -127,8 +127,13 @@ class SerialMQTT:
             #   the usb-port, which is the usb-hardward/driver level (so vulnerabilities), 
             #   and our "mqtt-serial" protocol, so they could send evil to other people (any mqtt broker!)
 
-            mqtt_packet = eval(json)
+            try:
+                mqtt_packet = eval(json)
+            except SyntaxError as e:
+                print("debugmqtt: bad message, no json:",json)
+                return None
 
+            # do we have an event handler?
             if self.on_message:
                 self.on_message( self, mqtt_packet['topic'], mqtt_packet['payload'] )
             else:
