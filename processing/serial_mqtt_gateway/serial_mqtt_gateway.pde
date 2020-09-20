@@ -1,4 +1,4 @@
-/* //<>// //<>//
+/*  //<>//
  Install mqtt:
  Sketch::Import Library::Add Library, processing-mqtt, install
  */
@@ -41,7 +41,7 @@ void draw() {
     process_arduino_input();
   }
   process_arduino_output();
-  
+
   // FIXME: if we don't see heartbeat in ~3 seconds, send reset to cpe:
   // ^c ^d
 }
@@ -99,11 +99,18 @@ void process_arduino_input() {
     } else if (arduino_input.startsWith("mqtt: publish ") ) {
       println( ">>", arduino_input );
       if (mqtt_connected) {
-        // FIXME validate the json, or at least warn if it is not
-        // FIXME: split out the topic!
-        mqtt.publish("awgrover/arduino", arduino_input.replace("mqtt: publish ", "") );
+        // FIXME validate the json, or at least warn if it is not. NB: not actually json, it's python print
+        String topic_message = arduino_input.replace("mqtt: publish ", "");
+        String topic_and_message[] = topic_message.split(" ", 2); // "some/topic the-message"
+        if (topic_and_message.length != 2) {
+          println("MQTT: publish didn't look like 'topic message'");
+        } else {
+          mqtt.publish(topic_and_message[0], topic_and_message[1]);
+        }
       } else {
         print("MQTT: not connected!");
+        // FIXME: send: mqtt: disconnect
+        // cpe should re-connect. message will be lost.
       }
 
       //

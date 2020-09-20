@@ -12,7 +12,7 @@ Serial connectUSBSerial(int baud) {
       // We are taking the first 1
       arduino_ports[i].contains("ACM") // linux more fully: /dev/ttyACM0
       || arduino_ports[i].contains("cu.usbmodem") // mac
-      || arduino_ports[i].contains("tty. usbmodem") // linux
+      || arduino_ports[i].contains("tty. usbmodem") // windows
       ) { 
       arduinoPortName = arduino_ports[i];
     }
