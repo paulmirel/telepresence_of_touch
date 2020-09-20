@@ -22,6 +22,18 @@ gc.collect()
 from unrvl_mqtt import UnrvlMQTT
 gc.collect()
 
+# MQTT server & topics
+unrvl_mqtt = UnrvlMQTT("mqtt://localhost:1883")
+# what channels do we want to listen to?
+unrvl_mqtt.subscribe(
+    "unrvl2020/awgrover",
+    {
+    # what do we want to do with each key:value
+    'touch' : do_touch_message
+    }
+)
+MQTTPublishTo = 'awgrover/touch'
+
 LastTouchPart = {}
 
 def update_touch(mqtt_message):
@@ -102,17 +114,7 @@ RemoteColor = ( 0, 60, 60 )
 OFF = ( 0, 0, 0 )
 
 # MQTT (remote communication)
-unrvl_mqtt = UnrvlMQTT("mqtt://localhost:1883")
-# what channel do we want to listen to?
-unrvl_mqtt.subscribe(
-    "unrvl2020/awgrover",
-    {
-    # what do we want to do with each key:value
-    'touch' : do_touch_message
-    }
-)
 unrvl_mqtt.connect()
-MQTTPublishTo = 'awgrover/touch'
 
 # setup event handling
 every_update_remote = Every(3) # how often to send complete state

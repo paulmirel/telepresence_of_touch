@@ -1,6 +1,7 @@
 /*  //<>//
  Install mqtt:
  Sketch::Import Library::Add Library, processing-mqtt, install
+ (https://github.com/256dpi/processing-mqtt)
  */
 
 import mqtt.*;
