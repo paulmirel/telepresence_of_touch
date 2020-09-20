@@ -1,18 +1,16 @@
-"""
-SerialMQTT
-Meant to talk to a serial-to-mqtt gateway by passing messages on serial.
-
-usage:
-
-from mqtt_serial import SerialMQTT
-mqtt = SerialMQTT("mqtt://some.host:port")
-mqtt.on_connect = connected # def connected(client, userdata, flags, rc):, do subscribes
-mqtt.on_message = message # def message(client, topic, message):
-mqtt.connect()
-
-while(True):
-    mqtt.run()
-"""
+# SerialMQTT
+# Meant to talk to a serial-to-mqtt gateway by passing messages on serial.
+# 
+# usage:
+# 
+# from mqtt_serial import SerialMQTT
+# mqtt = SerialMQTT("mqtt://some.host:port")
+# mqtt.on_connect = connected # def connected(client, userdata, flags, rc):, do subscribes
+# mqtt.on_message = message # def message(client, topic, message):
+# mqtt.connect()
+# 
+# while(True):
+#     mqtt.run()
 
 import supervisor
 import sys
@@ -20,10 +18,8 @@ import time
 
 class SerialMQTT:
 
-    """
-    :param str broker: MQTT Broker URL or IP Address.
-    :param State state: The protocol state
-    """
+    # :param str broker: MQTT Broker URL or IP Address.
+    # :param State state: The protocol state
     class State: # enum so we can do >= (no enums in circuitpython, sad)
         DISCONNECTED = 0
         WAIT_FOR_CONNECT = 1
@@ -59,9 +55,9 @@ class SerialMQTT:
             print("debugmqtt not connected tried to publish",topic,message)
 
     def run(self):
-        """ call this often to detect incoming MQTT stuff. 
-            we return None if we consumed, else the unconsummed line
-        """
+        # call this often to detect incoming MQTT stuff. 
+        #    we return None if we consumed, else the unconsummed line
+
         # fixme: pass in a string that you read, we'll say True if we consume it
 
         received = None # did we see end-of-line?
