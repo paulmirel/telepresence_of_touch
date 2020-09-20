@@ -1,8 +1,7 @@
 from mqtt_serial import SerialMQTT
 
 class UnrvlMQTT:
-    """ json packets, dispatch interface
-    """
+    # json packets, dispatch interface
 
     def __init__( self, server ):
         self.mqtt = SerialMQTT(server)
@@ -12,24 +11,20 @@ class UnrvlMQTT:
         self.mqtt.on_message = self.do_message
 
     def connect(self):
-        """
-        Can subscribe before connecting
-        """
+        # Can subscribe before connecting
         self.mqtt.connect()
 
     def subscribe( self, topic, key_pattern_handlers ):
-        """
-        on a message, with the key, whose value matches, call:
-              your_handler( topic, key, value )
-        e.g.
-        unrvl.subscribe( 
-          "unrvl/awgrover", 
-          {
-          re.compile('touch') : do_touch_message,
-          'push1' : do_push1_message
-          }
-        )
-        """
+        # on a message, with the key, whose value matches, call:
+        #       your_handler( topic, key, value )
+        # e.g.
+        # unrvl.subscribe( 
+        #   "unrvl/awgrover", 
+        #   {
+        #   re.compile('touch') : do_touch_message,
+        #   'push1' : do_push1_message
+        #   }
+        # )
 
         if not ( topic in self.subscriptions ):
             self.subscriptions[topic] = {}
@@ -44,9 +39,7 @@ class UnrvlMQTT:
             self.mqtt.publish(topic, message)
 
     def run( self ):
-        """
-        call often to react to mqtt stuff
-        """
+        # call often to react to mqtt stuff
         return self.mqtt.run()
 
     # private
