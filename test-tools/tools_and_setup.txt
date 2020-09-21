@@ -1,0 +1,33 @@
+# Mosquitto mqtt server
+## Detailed mosquitto activity
+mosquitto -v # drop the -v for less detailed, use -d for daemon
+
+# Mosquitto cli tools
+## Monitor connections
+mosquitto_sub -v -p 1883 -t '$SYS/broker/subscriptions/#'   -t '$SYS/broker/clients/#'
+
+# demo subscribe
+mosquitto_sub -p 1883 -t 'awgrover/#'
+
+# demo publish
+mosquitto_pub -p 1883 -t 'awgrover/hello' -m '{"a":1}'
+mosquitto_pub -p 1883 -t 'awgrover/hello' -m 'bob'
+
+# Emulate serial-port for processing serial_mqtt_gateway
+
+    Create a fake serial port for processing serial_mqtt_gateway
+    Name should trigger "looks like an arduino (usb-serial)"
+    This creates 2 serial ports, bridged together, i.e. endpoints
+    /dev/ttyACM0 <-> /dev/fakearduino
+sudo socat -d -d -d  pty,raw,echo=0,link=/dev/ttyACM0,mode=666 pty,raw,echo=0,mode=666,link=/dev/fakearduino
+
+## send something to it, as if the arduino:
+printf "something\r" > /dev/fakearduino
+
+## wait for output from it:
+cat < /dev/fakearduino
+
+## use screen for "interactive"
+screen /dev/fakearduino 115200
+    note that screen will send cr/lf
+    And, I have to restart socat if I quit from screen

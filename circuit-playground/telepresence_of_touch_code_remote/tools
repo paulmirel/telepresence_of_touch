@@ -1,0 +1,2 @@
+react -nof -beep code.py rsync -aXP ./ /media/awgrover/CIRCUITPY/
+circuit-python console
