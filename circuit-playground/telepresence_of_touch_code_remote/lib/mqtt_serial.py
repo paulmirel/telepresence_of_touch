@@ -29,9 +29,11 @@ class SerialMQTT:
         self.broker = broker # we are pretty stupid
         self.on_connect = None
         self.on_message = None
-        self.recvbuffer = ""
+        self.recvbuffer = "" # accumulating message
         self.state = self.State.DISCONNECTED
         self.connect_timeout = 0
+        self.mqtt_packet = None # last message
+        self.last_topic = None
 
     def connect(self): # assume clean_session, non-blocking
         print("mqtt: connect " + self.broker)
@@ -56,12 +58,20 @@ class SerialMQTT:
 
     def run(self):
         # call this often to detect incoming MQTT stuff. 
-        #    we return None if we consumed, else the unconsummed line
+        # returns:
+        #   If incoming serial is not mqtt:
+        #       theserialstring, False
+        #   If we finished connecting (you need to subscribe):
+        #       None, True
+        #   If nothing interesting:
+        #       None, False
+        # (then call .receive_message() to get incoming mqtt messages)
 
         # fixme: pass in a string that you read, we'll say True if we consume it
 
         received = None # did we see end-of-line?
         while supervisor.runtime.serial_bytes_available:
+            # Consume everything we can (until a full message!)
             # it appears that a sys.stdin takes essentially 0 time to read
             # but, perhaps the baud rate of the host computer has an effect
             # ( I saw about .01 sec per char when I set 115200)
@@ -77,6 +87,7 @@ class SerialMQTT:
                 else:
                     print("GOT '" + self.recvbuffer + "'")
                     received = True
+                    break # there may be more in the serial buffer, but handle this first
             else:
                 self.recvbuffer = self.recvbuffer + next_char
 
@@ -88,21 +99,27 @@ class SerialMQTT:
                 print("debugmqtt: retry connect")
                 self.connect()
 
-            return None
+            return [None,False]
 
         # when we get a mqtt message:
         if self.recvbuffer.startswith("mqtt: connected"):
-            if self.state >= self.State.WAIT_FOR_CONNECT:
+            self.recvbuffer = ""
+
+            if self.state >= self.State.WAIT_FOR_CONNECT: # we may re-connect
+                self.state = self.State.CONNECTED
+
+                print("debugmqtt connected")
                 if self.on_connect:
                     self.on_connect()
                 else:
-                    print("debugmqtt saw connected, but no on_connect listener")
-                self.state = self.State.CONNECTED
+                    #print("debugmqtt saw connected, but no on_connect listener")
+                    pass
+
+                return [None, True]
+
             else:
                 print("debugmqtt connected, but already @", self.state)
-
-            self.recvbuffer = ""
-            return None
+                return [None, False]
 
         elif self.recvbuffer.startswith("mqtt: message "):
             json = self.recvbuffer[ len("mqtt: message "): ]
@@ -121,27 +138,45 @@ class SerialMQTT:
             #   the usb-port, which is the usb-hardward/driver level (so vulnerabilities), 
             #   and our "mqtt-serial" protocol, so they could send evil to other people (any mqtt broker!)
 
+            self.mqtt_packet = None # just to be clear
+
             try:
-                mqtt_packet = eval(json)
+                self.mqtt_packet = eval(json)
             except SyntaxError as e:
                 print("debugmqtt: bad message, no json:",json)
                 print( e )
                 self.recvbuffer = ""
-                return None
+                return [None, False]
 
             # do we have an event handler?
             if self.on_message:
-                self.on_message( self, mqtt_packet['topic'], mqtt_packet['payload'] )
+                self.on_message( self, self.mqtt_packet['topic'], self.mqtt_packet['payload'] )
             else:
-                print("debugmqtt no on_message:", json)
+                #print("debugmqtt no on_message:", json)
+                pass
             self.recvbuffer = ""
+            return [None, False]
             
         # Not an mqtt: message
         else:
-            print("debugmqtt not mqtt:")
+            #print("debugmqtt not mqtt:")
             x = self.recvbuffer
             self.recvbuffer = ""
-            return x
+            return [x,None]
 
         # mqtt_client.on_connect = connected # def connected(client, userdata, flags, rc):
         # mqtt_client.on_message = message # def message(client, topic, message):
+    
+    def receive_message(self):
+        # Call this every "loop" to see if there are any incoming messages
+        # returns
+        #   None
+        #   OR
+        #   topic, mqtt_message
+        if self.mqtt_packet:
+            topic=self.mqtt_packet['topic']
+            payload=self.mqtt_packet['payload']
+            self.mqtt_packet = None # "consumed"
+            return [topic, payload]
+        else:
+            return [None,None]
