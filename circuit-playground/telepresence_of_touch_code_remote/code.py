@@ -70,8 +70,11 @@ def update_touch(mqtt_message):
         cp.pixels[ 8 ] = OFF
         touch_part[4] = OFF
 
+    # add our initials
+
     # we don't want to send anything if nothing has changed
     if touch_part != LastTouchPart:
+        mqtt_message['me'] = Me # add our initials
         mqtt_message['touch'] = touch_part
         LastTouchPart = touch_part # remember for next time
     gc.collect()
@@ -106,7 +109,9 @@ def handle_mqtt_message():
     if not mqtt_message:
         return # nothing to do this time
 
-    # FIXME: ignore our own message! initials
+    # ignore our own message!
+    if 'me' in mqtt_message and mqtt_message['me'] == Me:
+        return
 
     print("MSG ", mqtt_message)
 
@@ -204,7 +209,6 @@ while True:
     other_message, should_reconnect = mqtt.run()
     # we may have to connect (or re-connect)
     if should_reconnect:
-        print("## reconnect?", should_reconnect)
         do_subscriptions()
 
     # just echo any other text that came over the serial
