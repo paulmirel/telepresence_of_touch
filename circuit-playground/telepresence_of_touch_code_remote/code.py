@@ -15,14 +15,109 @@ import gc
 
 gc.collect()
 from adafruit_circuitplayground import cp
-
 gc.collect()
 from every import Every
 gc.collect()
 from mqtt_serial import SerialMQTT
 gc.collect()
 
+## Constants!
+# your initials
+Me='ANON' # EDIT ME with your initials or something short
+
+MyColor = None # random, or edit this with your color (cf. "My color is (181, 74, 0)")
+LocalColor = None # will be MyColor unless you change it in setup()
+RemoteColor = None # will be MyColor unless you change it in setup()
+
+MQTTServer = "mqtt://localhost:1883"
+
+# Send touch messages to topic:
+MQTTPublishTo = 'unrvl2020/touch-everyone'
+# Listen for touch messages in topic:
+MQTTSubscribe = [ 'unrvl2020/touch-everyone' ]
+
+## HeartBeat
+# We're using "Every":
+# will be true "every n seconds", non-blocking time.sleep()
+# to "flash" the built-in LED
+HeartBeat = Every(3)
+
+# Touch constants
+EveryUpdateTouch = Every(0.01) # how often to check touch sensors
+OFF = ( 0, 0, 0 )
+
+Mqtt=None # will hold the SerialMQTT object
 LastTouchPart = {}
+
+def setup():
+    global MyColor, RemoteColor, LocalColor, Mqtt
+
+    # (seed the random generator)
+    random.seed(int(cp.light + cp.temperature * 100 + time.monotonic()*1000));
+
+    # pick our color if it is still None
+    if not MyColor:
+        MyColor = random_color() # Random if you didn't set it
+    print("My color is", MyColor);
+
+    LocalColor = RemoteColor = MyColor
+
+    # because HeartBeat turns it on immediately
+    cp.red_led = False 
+
+    ## Touch setup
+    cp.pixels.brightness = 0.4 # the LEDs are too bright
+    cp.pixels[0] = RemoteColor; # Show our color
+
+    # MQTT (remote communication)
+    # MQTT server & topics
+    Mqtt = SerialMQTT(MQTTServer)
+    Mqtt.connect()
+
+    # what channels do we want to listen to?
+    Mqtt.subscribe( "unrvl2020/touch-everyone" )
+    # Mqtt.subscribe( "unrvl2020/shake-group1" )
+
+
+def loop():
+    # blink the plain LED (next to usb) slowly to indicate that we are running
+    if HeartBeat():
+        #print("HeartBeat free mermory", gc.mem_free(), time.monotonic())
+        cp.red_led = not cp.red_led # clever "toggle", aka "blink"
+
+
+    # Add key:value that the remote system should know about,
+    # e.g. mqtt_message['touch1'] = LocalColor
+    # The remote system has to know what to do with each "key"
+    mqtt_message = {} # filled in and will be sent if anything changed
+
+    # We could check for other things, like shake, buttons, etc
+    # and add to mqtt_message
+    # (or make a different message for a differnt topic)
+
+    # we can react locally very fast: 0.01 sec
+    if EveryUpdateTouch():
+        # checks each touch pad, lights the led, adds to mqtt_message
+        update_touch( mqtt_message )
+
+    # if anything to send, do it
+    if mqtt_message:
+        mqtt_message['me'] = Me # add our initials
+        Mqtt.publish(MQTTPublishTo, mqtt_message)
+
+    # handle mqtt communication
+    other_message, should_reconnect = Mqtt.run()
+    # we may have to connect (or re-connect)
+    if should_reconnect:
+        do_subscriptions()
+
+    # just echo any other text that came over the serial
+    if other_message:
+        print("Not understood:", other_message)
+
+    topic, mqtt_message = Mqtt.receive_message()
+    if mqtt_message:
+        handle_mqtt_message(topic, mqtt_message)
 
 def update_touch(mqtt_message):
     # fill in the message to correspond to our touch
@@ -74,7 +169,6 @@ def update_touch(mqtt_message):
 
     # we don't want to send anything if nothing has changed
     if touch_part != LastTouchPart:
-        mqtt_message['me'] = Me # add our initials
         mqtt_message['touch'] = touch_part
         LastTouchPart = touch_part # remember for next time
     gc.collect()
@@ -99,15 +193,11 @@ def random_color():
 def do_subscriptions():
     # when we finally connect, need to subscribe
     for topic in MQTTSubscribe:
-        mqtt.subscribe(topic)
+        Mqtt.subscribe(topic)
 
-def handle_mqtt_message():
+def handle_mqtt_message(topic, mqtt_message):
     # See if there is an incomming message
     # react to it
-
-    topic, mqtt_message = mqtt.receive_message()
-    if not mqtt_message:
-        return # nothing to do this time
 
     # ignore our own message!
     if 'me' in mqtt_message and mqtt_message['me'] == Me:
@@ -116,7 +206,7 @@ def handle_mqtt_message():
     print("MSG ", mqtt_message)
 
     # We could make decisions about what to do based on the topic...
-    
+
     # A "touch" message looks like:
     # { touch" : { 1 : [0,255,0], 2: [255,0,0], 3:[0,0,0] }
     # i.e. which "touch" and the requested color
@@ -127,6 +217,10 @@ def handle_mqtt_message():
         if ( not isinstance(value, dict) ):
             print("debugmqtt: 'touch' wasn't an dict:",value)
             return
+
+        # we could make decisions based on the value['me']
+    
+        # But, just show the touch
 
         print("Touch! ")
         remote_to_local = [ 0, 2, 4, 6, 8 ] # map of touch number to local led number (unused)
@@ -140,79 +234,11 @@ def handle_mqtt_message():
             else:
                 print("debugmqtt: expected the 'color' to be a tuple/list, saw", color.__class__.__name__,color)
 
-### Startup
+### 
+setup()
 
-MQTTServer = "mqtt://localhost:1883"
-
-MQTTPublishTo = 'unrvl2020/touch-everyone'
-MQTTSubscribe = [ 'unrvl2020/touch-everyone' ]
-
-# your initials
-Me='awg'
-
-# pick our color
-# (seed the random generator)
-random.seed(int(cp.light + cp.temperature * 100 + time.monotonic()*1000));
-RemoteColor = random_color() # Random. edit me! what's your color?
-LocalColor = RemoteColor
-print("My color is", RemoteColor);
-
-## Heartbeat
-# We're using "Every":
-# will be true "every n seconds", non-blocking time.sleep()
-heartbeat = Every(3)
-cp.red_led = False # because heartbeat turns it on immediately
-
-## Touch
-cp.pixels.brightness = 0.4 # the LEDs are too bright
-every_update_touch = Every(0.01) # how often to check touch sensors
-OFF = ( 0, 0, 0 )
-cp.pixels[0] = RemoteColor;
-
-# MQTT (remote communication)
-# MQTT server & topics
-mqtt = SerialMQTT(MQTTServer)
-mqtt.connect()
-
-# what channels do we want to listen to?
-mqtt.subscribe( "unrvl2020/touch-everyone" )
-# mqtt.subscribe( "unrvl2020/shake-group1" )
-
-# setup event handling
-every_update_remote = Every(3) # how often to send complete state FIXME: drop?
-
-### Loop
 print("Free memory before loop",gc.mem_free())
 
 while True:
-    # blink the plain LED (next to usb) slowly to indicate that we are running
-    if heartbeat():
-        #print("heartbeat free mermory", gc.mem_free(), time.monotonic())
-        cp.red_led = not cp.red_led # clever "toggle", aka "blink"
+    loop()
 
-
-    # Add key:value that the remote system should know about,
-    # e.g. mqtt_message['touch1'] = LocalColor
-    # The remote system has to know what to do with each "key"
-    mqtt_message = {} # filled in and will be sent if anything changed
-
-    # we can react locally very fast: 0.01 sec
-    if every_update_touch():
-        # checks each touch pad, lights the led, adds to mqtt_message
-        update_touch( mqtt_message )
-
-    # if anything to send, do it
-    if mqtt_message:
-        mqtt.publish(MQTTPublishTo, mqtt_message)
-
-    # handle mqtt communication
-    other_message, should_reconnect = mqtt.run()
-    # we may have to connect (or re-connect)
-    if should_reconnect:
-        do_subscriptions()
-
-    # just echo any other text that came over the serial
-    if other_message:
-        print("Not understood:", other_message)
-
-    handle_mqtt_message()
