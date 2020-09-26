@@ -142,7 +142,7 @@ def update_touch(mqtt_message):
         touch_part[1] = OFF
 
     # touch near pixel 3, between A6 and A7
-    if cp.touch_A6 or cp.touch_A7:
+    if cp.touch_A6 or cp.touch_TX: # aka A7 (bluefruit calls it TX)
         cp.pixels[ 3 ] = LocalColor
         touch_part[2] = LocalColor
     else:
