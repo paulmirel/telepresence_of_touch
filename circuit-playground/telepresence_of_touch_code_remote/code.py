@@ -120,7 +120,7 @@ def loop():
     # We can send a message(s) once, as soon as we connect
     if Mqtt.is_connected() and FirstTime:
         Mqtt.publish(MQTTPublishTo, { "from" : Me, "message" : "hello"} )
-        FirstTime = False
+        FirstTime = False # we did it, not first-time anymore
 
 def update_touch(mqtt_message):
     # fill in the message to correspond to our touch
