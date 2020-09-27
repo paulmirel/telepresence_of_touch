@@ -21,7 +21,9 @@ gc.collect()
 from mqtt_serial import SerialMQTT
 gc.collect()
 
+###
 ## Constants!
+
 # your initials
 Me='ANON' # EDIT ME with your initials or something short
 
@@ -33,8 +35,11 @@ MQTTServer = "mqtt://localhost:1883"
 
 # Send touch messages to topic:
 MQTTPublishTo = 'unrvl2020/touch-everyone'
-# Listen for touch messages in topic:
-MQTTSubscribe = [ 'unrvl2020/touch-everyone' ]
+# Listen for touch messages in topic(s):
+MQTTSubscribe = [ 
+    "unrvl2020/touch-everyone",
+    #"unrvl2020/shake-group1"
+    ]
 
 ## HeartBeat
 # We're using "Every":
@@ -44,10 +49,11 @@ HeartBeat = Every(3)
 
 # Touch constants
 EveryUpdateTouch = Every(0.01) # how often to check touch sensors
-OFF = ( 0, 0, 0 )
+OFF = ( 0, 0, 0 ) # convenient off value for LEDs
 
 Mqtt=None # will hold the SerialMQTT object
-LastTouchPart = {}
+LastTouchPart = {} # so we can tell if we need to send more touch data
+FirstTime = True # for initial message
 
 def setup():
     global MyColor, RemoteColor, LocalColor, Mqtt
@@ -72,19 +78,18 @@ def setup():
     # MQTT (remote communication)
     # MQTT server & topics
     Mqtt = SerialMQTT(MQTTServer)
-    Mqtt.connect()
-
-    # what channels do we want to listen to?
-    Mqtt.subscribe( "unrvl2020/touch-everyone" )
-    # Mqtt.subscribe( "unrvl2020/shake-group1" )
-
+    for topic in MQTTSubscribe:
+        Mqtt.subscribe(topic)
 
 def loop():
+    global FirstTime
+
     # blink the plain LED (next to usb) slowly to indicate that we are running
     if HeartBeat():
         #print("HeartBeat free mermory", gc.mem_free(), time.monotonic())
         cp.red_led = not cp.red_led # clever "toggle", aka "blink"
 
+    # Should we show some indication on the CPX that we are connected?
 
     # Add key:value that the remote system should know about,
     # e.g. mqtt_message['touch1'] = LocalColor
@@ -106,18 +111,16 @@ def loop():
         Mqtt.publish(MQTTPublishTo, mqtt_message)
 
     # handle mqtt communication
-    other_message, should_reconnect = Mqtt.run()
-    # we may have to connect (or re-connect)
-    if should_reconnect:
-        do_subscriptions()
-
-    # just echo any other text that came over the serial
-    if other_message:
-        print("Not understood:", other_message)
-
-    topic, mqtt_message = Mqtt.receive_message()
+    other_message, topic, mqtt_message = Mqtt.receive_message()
     if mqtt_message:
         handle_mqtt_message(topic, mqtt_message)
+    elif other_message:
+        print("Not understood:", other_message)
+
+    # We can send a message(s) once, as soon as we connect
+    if Mqtt.is_connected() and FirstTime:
+        Mqtt.publish(MQTTPublishTo, { "from" : Me, "message" : "hello"} )
+        FirstTime = False
 
 def update_touch(mqtt_message):
     # fill in the message to correspond to our touch
@@ -189,11 +192,6 @@ def random_color():
         green = 255 - red
         blue = 0
     return (red,green,blue)
-
-def do_subscriptions():
-    # when we finally connect, need to subscribe
-    for topic in MQTTSubscribe:
-        Mqtt.subscribe(topic)
 
 def handle_mqtt_message(topic, mqtt_message):
     # See if there is an incomming message
