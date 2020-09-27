@@ -102,7 +102,7 @@ def loop():
 
     # if anything to send, do it
     if mqtt_message:
-        mqtt_message['me'] = Me # add our initials
+        mqtt_message['from'] = Me # add our initials
         Mqtt.publish(MQTTPublishTo, mqtt_message)
 
     # handle mqtt communication
@@ -200,7 +200,7 @@ def handle_mqtt_message(topic, mqtt_message):
     # react to it
 
     # ignore our own message!
-    if 'me' in mqtt_message and mqtt_message['me'] == Me:
+    if 'from' in mqtt_message and mqtt_message['from'] == Me:
         return
 
     print("MSG ", mqtt_message)
@@ -218,7 +218,7 @@ def handle_mqtt_message(topic, mqtt_message):
             print("debugmqtt: 'touch' wasn't an dict:",value)
             return
 
-        # we could make decisions based on the value['me']
+        # we could make decisions based on the value['from']
     
         # But, just show the touch
 
