@@ -5,8 +5,6 @@
 # 
 # from mqtt_serial import SerialMQTT
 # mqtt = SerialMQTT("mqtt://some.host:port")
-# mqtt.on_connect = connected # def connected(client, userdata, flags, rc):, do subscribes
-# mqtt.on_message = message # def message(client, topic, message):
 # mqtt.connect()
 # 
 # while(True):
@@ -27,8 +25,6 @@ class SerialMQTT:
 
     def __init__( self, broker ): # just an url
         self.broker = broker # we are pretty stupid
-        self.on_connect = None
-        self.on_message = None
         self.recvbuffer = "" # accumulating message
         self.state = self.State.DISCONNECTED
         self.connect_timeout = 0
@@ -109,12 +105,6 @@ class SerialMQTT:
                 self.state = self.State.CONNECTED
 
                 print("debugmqtt connected")
-                if self.on_connect:
-                    self.on_connect()
-                else:
-                    #print("debugmqtt saw connected, but no on_connect listener")
-                    pass
-
                 return [None, True]
 
             else:
@@ -148,12 +138,6 @@ class SerialMQTT:
                 self.recvbuffer = ""
                 return [None, False]
 
-            # do we have an event handler?
-            if self.on_message:
-                self.on_message( self, self.mqtt_packet['topic'], self.mqtt_packet['payload'] )
-            else:
-                #print("debugmqtt no on_message:", json)
-                pass
             self.recvbuffer = ""
             return [None, False]
             
@@ -164,9 +148,6 @@ class SerialMQTT:
             self.recvbuffer = ""
             return [x,None]
 
-        # mqtt_client.on_connect = connected # def connected(client, userdata, flags, rc):
-        # mqtt_client.on_message = message # def message(client, topic, message):
-    
     def receive_message(self):
         # Call this every "loop" to see if there are any incoming messages
         # returns
