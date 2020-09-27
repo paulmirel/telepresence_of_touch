@@ -111,9 +111,9 @@ def loop():
         Mqtt.publish(MQTTPublishTo, mqtt_message)
 
     # handle mqtt communication
-    other_message, topic, mqtt_message = Mqtt.receive_message()
-    if mqtt_message:
-        handle_mqtt_message(topic, mqtt_message)
+    other_message, topic, mqtt_incoming_message = Mqtt.receive_message()
+    if mqtt_incoming_message:
+        handle_mqtt_message(topic, mqtt_incoming_message)
     elif other_message:
         print("Not understood:", other_message)
 
