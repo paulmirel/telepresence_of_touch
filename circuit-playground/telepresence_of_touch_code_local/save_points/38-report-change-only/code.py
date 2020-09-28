@@ -9,7 +9,7 @@ OFF = ( 0, 0, 0 )
 LastTouched = [False, False, False, False] # 4 entries for 4 quadrants
 
 while True:
-    if cp.touch_A4 :
+    if cp.touch_A4:
         if not LastTouched[ 0 ]: # if the touch is different than it last was.
             cp.pixels[ 1 ] = light_color
             print( "01" )
@@ -29,4 +29,3 @@ while True:
         if value == "00":
             cp.pixels[ 0 ] = OFF
     time.sleep( 0.1 ) #pause to be able to hear a ctrl-c
-
