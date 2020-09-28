@@ -7,11 +7,13 @@ light_color = ( 255, 0, 0 )
 OFF = ( 0, 0, 0 )
 
 LastTouched = [False, False, False, False] # 4 entries for 4 quadrants
+
 while True:
-    if cp.touch_A4 and not LastTouched[ 0 ]: # if the touch is different than it last was.
-        cp.pixels[ 1 ] = light_color
-        print( "01" )
-        LastTouched[ 0 ] = True # touch detected, remember that
+    if cp.touch_A4 :
+        if not LastTouched[ 0 ]: # if the touch is different than it last was.
+            cp.pixels[ 1 ] = light_color
+            print( "01" )
+            LastTouched[ 0 ] = True # touch detected, remember that
     elif LastTouched[ 0 ]:
         cp.pixels[ 1 ] = OFF
         print( "00" )
