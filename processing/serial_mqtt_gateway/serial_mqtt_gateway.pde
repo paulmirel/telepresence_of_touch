@@ -66,6 +66,7 @@ void debug_str_to_hex(String x) {
 void setup_arduino_serial() {
   arduino = connectUSBSerial(57600);
   arduino.bufferUntil(13);
+  arduino.write("\03\04");
 }
 
 void serialEvent(Serial p) {

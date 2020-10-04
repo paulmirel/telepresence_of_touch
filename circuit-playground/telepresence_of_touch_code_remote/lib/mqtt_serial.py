@@ -22,6 +22,7 @@ class SerialMQTT:
         DISCONNECTED = 0
         WAIT_FOR_CONNECT = 1
         CONNECTED = 2
+    RetryConnect = 3 # seconds
 
     def __init__( self, broker ): # just an url
         self.broker = broker # we are pretty stupid
@@ -30,12 +31,13 @@ class SerialMQTT:
         self.connect_timeout = 0
         self.last_topic = None
         self.subscriptions = []
+        print("debugmqtt: will retry connect every",self.RetryConnect,"seconds")
         self.connect()
 
     def connect(self): # assume clean_session, non-blocking
         print("mqtt: connect " + self.broker)
         self.state = self.State.WAIT_FOR_CONNECT
-        self.connect_timeout = time.monotonic() + 3 # retry every second
+        self.connect_timeout = time.monotonic() + self.RetryConnect # retry every ...
 
     def is_connected(self):
         return self.state == self.State.CONNECTED
@@ -94,7 +96,6 @@ class SerialMQTT:
             # initial connect depends on the processing side listening, so retry
             if self.state == self.State.WAIT_FOR_CONNECT and self.connect_timeout <= time.monotonic():
                 # if supervisor.runtime.serial_connected: # doesn't seem to work
-                print("debugmqtt: retry connect")
                 self.connect()
 
             return [None,None, None]

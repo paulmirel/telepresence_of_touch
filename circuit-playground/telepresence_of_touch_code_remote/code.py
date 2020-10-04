@@ -34,11 +34,11 @@ RemoteColor = None # will be MyColor unless you change it in setup()
 MQTTServer = "mqtt://localhost:1883"
 
 # Send touch messages to topic:
-MQTTPublishTo = 'unrvl2020/touch-everyone'
+MQTTPublishTo = 'unrvl2020/touch-everyone' # # "unrvl2020/shake-group1"
 # Listen for touch messages in topic(s):
 MQTTSubscribe = [ 
-    "unrvl2020/touch-everyone",
-    #"unrvl2020/shake-group1"
+    MQTTPublishTo,
+    # more than 1...
     ]
 
 ## HeartBeat
