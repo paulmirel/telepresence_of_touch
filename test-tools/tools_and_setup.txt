@@ -18,6 +18,8 @@ mosquitto_sub -d -h broker.shiftr.io -p 1883 -u enigmeta~unrvl2020 -t '$info'
 mosquitto_sub -d -h broker.shiftr.io -p 1883 -u enigmeta~unrvl2020 -t '/enigmeta/unrvl2020'
 mosquitto_sub -d -h broker.shiftr.io -p 1883 -u enigmeta~unrvl2020 -t '/enigmeta/unrvl2020/loud'
 
+mosquitto_sub -d -h broker.shiftr.io -p 1883 -u f557f2ed -P e8f599a52aae3773 -t 'unrvl2020/touch-everyone'
+
 # Emulate serial-port for processing serial_mqtt_gateway
 
     Create a fake serial port for processing serial_mqtt_gateway
