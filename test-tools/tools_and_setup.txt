@@ -13,6 +13,8 @@ mosquitto_sub -p 1883 -t 'awgrover/#'
 mosquitto_pub -p 1883 -t 'awgrover/hello' -m '{"a":1}'
 mosquitto_pub -p 1883 -t 'awgrover/hello' -m 'bob'
 
+mosquitto_pub -d -h broker.shiftr.io -p 1883 -u f557f2ed -P e8f599a52aae3773 -t 'unrvl2020/touch-everyone' -m "{'touch': {4: (0, 0, 0), 1: (0, 0, 0), 2: (0, 0, 0), 3: (0, 9, 246)}, 'from': 'ANON'}"
+
 # shiftr
 mosquitto_sub -d -h broker.shiftr.io -p 1883 -u enigmeta~unrvl2020 -t '$info'
 mosquitto_sub -d -h broker.shiftr.io -p 1883 -u enigmeta~unrvl2020 -t '/enigmeta/unrvl2020'
