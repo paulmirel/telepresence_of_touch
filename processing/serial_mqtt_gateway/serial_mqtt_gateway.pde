@@ -78,7 +78,7 @@ void serialEvent(Serial p) {
     String aline = arduino.readString();
     aline = aline.trim(); // substring(0, arduino_input.length()-1 );
     arduino_input.add( aline );
-    #println("Serial:",aline);
+    // println("Serial:",aline);
   }
 }
 

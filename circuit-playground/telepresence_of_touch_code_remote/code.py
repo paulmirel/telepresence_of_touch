@@ -234,11 +234,11 @@ def handle_mqtt_message(topic, mqtt_message):
         remote_to_local = [ 0, 2, 4, 5, 7 ] # map of touch number to local led number (unused)
 
         for which, color in value.items():
-            #print('remote', which, 'to', remote_to_local[which],color)
+            print('remote', which, 'to', remote_to_local[which],color)
             if color == (0,0,0):
                 cp.pixels[ remote_to_local[which] ] = OFF
             elif isinstance(color,tuple) or isinstance(color,list):
-                cp.pixels[ remote_to_local[which] ] = RemoteColor # ignore their color
+                cp.pixels[ remote_to_local[which] ] = color # ignore their color
             else:
                 print("debugmqtt: expected the 'color' to be a tuple/list, saw", color.__class__.__name__,color)
 
