@@ -14,7 +14,7 @@ ArrayList<String> mqtt_topic_list = new ArrayList<String>();
 ;
 
 Serial arduino;
-String arduino_input;
+ArrayList<String> arduino_input = new ArrayList<String>();
 
 void setup() {
   print("Started\n");
@@ -75,34 +75,41 @@ void serialEvent(Serial p) {
   if (p == arduino) {
     // will get trailing \r
     // so remove it
-    arduino_input = arduino.readString();
-    arduino_input = arduino_input.trim(); // substring(0, arduino_input.length()-1 );
-
-    // println("Serial:",arduino_input);
+    String aline = arduino.readString();
+    aline = aline.trim(); // substring(0, arduino_input.length()-1 );
+    arduino_input.add( aline );
+    #println("Serial:",aline);
   }
 }
 
 void process_arduino_input() {
 
-  if ( arduino_input.startsWith("mqtt: ") ) {
-    if (arduino_input.startsWith("mqtt: connect ")) {
+  if ( arduino_input.isEmpty() ) {
+    return;
+  }
+  
+  String arduino_line = arduino_input.remove(0); // pop
+  
+  if ( arduino_line.startsWith("mqtt: ") ) {
+    if (arduino_line.startsWith("mqtt: connect ")) {
       // mqtt: connect mqtt://x@x:some.host.wat:1883
-      println( ">>", arduino_input );
-      String url = arduino_input.replace("mqtt: connect ", "");
+      println( ">>", arduino_line );
+      String url = arduino_line.replace("mqtt: connect ", "");
       //url = "mqtt://localhost:1883";
       print("Will connect '" + url + "'\n");
       //debug_str_to_hex(url);
       // FIXME: this blocks. timeout and retry?
       // FIXME: can throw: RuntimeException: [MQTT] Failed to connect:: Connection lost
-      arduino_input = null;
       mqtt.connect(url); // no client-id on purpose
-
+      println("## finished connect");
+      return;
+      
       //
-    } else if (arduino_input.startsWith("mqtt: publish ") ) {
-      println( ">>", arduino_input );
+    } else if (arduino_line.startsWith("mqtt: publish ") ) {
+      println( ">>", arduino_line );
       if (mqtt_connected) {
         // FIXME validate the json, or at least warn if it is not. NB: not actually json, it's python print
-        String topic_message = arduino_input.replace("mqtt: publish ", "");
+        String topic_message = arduino_line.replace("mqtt: publish ", "");
         String topic_and_message[] = topic_message.split(" ", 2); // "some/topic the-message"
         if (topic_and_message.length != 2) {
           println("MQTT: publish didn't look like 'topic message'");
@@ -116,10 +123,10 @@ void process_arduino_input() {
       }
 
       //
-    } else if (arduino_input.startsWith("mqtt: subscribe ") ) {
-      println( ">>", arduino_input );
+    } else if (arduino_line.startsWith("mqtt: subscribe ") ) {
+      println( ">>", arduino_line );
       if (mqtt_connected) {
-        String topic = arduino_input.replace("mqtt: subscribe ", "");
+        String topic = arduino_line.replace("mqtt: subscribe ", "");
 
         mqtt.subscribe(topic);
 
@@ -131,9 +138,8 @@ void process_arduino_input() {
 
     //
   } else {
-    println( ">", arduino_input );
+    println( ">", arduino_line );
   }
-  arduino_input = null;
 }
 
 // ----
@@ -170,8 +176,9 @@ void messageReceived(String topic, byte[] b_payload) {
   mqtt_payload = new String(b_payload);
   mqtt_json_payload = null;
   // Which is a json dictionary...
+  // NB: NOT ANYMORE, it's a python dict
   try {
-    mqtt_json_payload = parseJSONObject(mqtt_payload); // null if not json
+    //mqtt_json_payload = parseJSONObject(mqtt_payload); // null if not json
   }
   catch (RuntimeException e) {
     if ( ! e.getMessage().startsWith("A JSONObject text must begin with") ) {

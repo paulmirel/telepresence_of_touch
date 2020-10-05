@@ -58,13 +58,12 @@ FirstTime = True # for initial message
 def setup():
     global MyColor, RemoteColor, LocalColor, Mqtt
 
-    # (seed the random generator)
-    random.seed(int(cp.light + cp.temperature * 100 + time.monotonic()*1000));
+    seed_the_random()
 
     # pick our color if it is still None
     if not MyColor:
         MyColor = random_color() # Random if you didn't set it
-    print("My color is", MyColor);
+    print("My color is", MyColor)
 
     LocalColor = RemoteColor = MyColor
 
@@ -73,13 +72,15 @@ def setup():
 
     ## Touch setup
     cp.pixels.brightness = 0.4 # the LEDs are too bright
-    cp.pixels[0] = RemoteColor; # Show our color
+    cp.pixels[0] = RemoteColor # Show our color
 
     # MQTT (remote communication)
     # MQTT server & topics
     Mqtt = SerialMQTT(MQTTServer)
+    #print("SUBSCRIBING...")
     for topic in MQTTSubscribe:
         Mqtt.subscribe(topic)
+        #print("SUBSCRIBING", topic)
 
 def loop():
     global FirstTime
@@ -121,6 +122,15 @@ def loop():
     if Mqtt.is_connected() and FirstTime:
         Mqtt.publish(MQTTPublishTo, { "from" : Me, "message" : "hello"} )
         FirstTime = False # we did it, not first-time anymore
+
+def seed_the_random():
+    # seed the random generator, random.seed(x) doesn't actually change much!
+    # But, getting N randoms, if N is noise, works
+    seed = cp.light + cp.temperature + time.monotonic()
+    seed = (seed - int(seed)) * 100
+    random.seed(int(seed))
+    for i in range(seed % 100):
+        random.random()
 
 def update_touch(mqtt_message):
     # fill in the message to correspond to our touch
@@ -178,7 +188,7 @@ def update_touch(mqtt_message):
 
 def random_color():
     # pick a random color, but near the rim of the color wheel (high saturation/value)
-    rg_or_b = random.uniform(1,3.99);
+    rg_or_b = random.uniform(1,3.99)
     if rg_or_b >= 3:
         blue = int(255 * (rg_or_b - 3))
         green = 255 - blue
@@ -197,11 +207,11 @@ def handle_mqtt_message(topic, mqtt_message):
     # See if there is an incomming message
     # react to it
 
+    #print("MSG ", mqtt_message.__class__.__name__, ":", mqtt_message)
+
     # ignore our own message!
     if 'from' in mqtt_message and mqtt_message['from'] == Me:
         return
-
-    print("MSG ", mqtt_message)
 
     # We could make decisions about what to do based on the topic...
 
@@ -220,11 +230,11 @@ def handle_mqtt_message(topic, mqtt_message):
     
         # But, just show the touch
 
-        print("Touch! ")
-        remote_to_local = [ 0, 2, 4, 6, 8 ] # map of touch number to local led number (unused)
+        #print("Touch! ")
+        remote_to_local = [ 0, 2, 4, 5, 7 ] # map of touch number to local led number (unused)
 
         for which, color in value.items():
-            print('remote', which, 'to', remote_to_local[which],color)
+            #print('remote', which, 'to', remote_to_local[which],color)
             if color == (0,0,0):
                 cp.pixels[ remote_to_local[which] ] = OFF
             elif isinstance(color,tuple) or isinstance(color,list):

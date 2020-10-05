@@ -137,7 +137,12 @@ class SerialMQTT:
             mqtt_packet = None
 
             try:
+                #print("eval'ing",json)
                 mqtt_packet = eval(json)
+                # bug... hack
+                if "payload" in mqtt_packet and isinstance(mqtt_packet["payload"], str):
+                    mqtt_packet["payload"] = eval( mqtt_packet["payload"] )
+                #print("eval'd",mqtt_packet.__class__.__name__,mqtt_packet)
             except SyntaxError as e:
                 print("debugmqtt: bad message, no json:",json)
                 print( e )
