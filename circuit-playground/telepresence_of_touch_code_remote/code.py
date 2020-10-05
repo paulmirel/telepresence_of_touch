@@ -25,7 +25,7 @@ gc.collect()
 ## Constants!
 
 # your initials
-Me='ANON' # EDIT ME with your initials or something short
+Me='ANONx' # EDIT ME with your initials or something short
 
 MyColor = None # random, or edit this with your color (cf. "My color is (181, 74, 0)")
 LocalColor = None # will be MyColor unless you change it in setup()
@@ -234,7 +234,7 @@ def handle_mqtt_message(topic, mqtt_message):
         remote_to_local = [ 0, 2, 4, 5, 7 ] # map of touch number to local led number (unused)
 
         for which, color in value.items():
-            print('remote', which, 'to', remote_to_local[which],color)
+            #print('remote', which, 'to', remote_to_local[which],color)
             if color == (0,0,0):
                 cp.pixels[ remote_to_local[which] ] = OFF
             elif isinstance(color,tuple) or isinstance(color,list):
