@@ -23,7 +23,7 @@ from unrvl.random_color import seed_the_random, random_color
 ## Constants!
 
 # your initials
-Me='awg' # EDIT ME with your initials or something short
+Me='ANON' # EDIT ME with your initials or something short
 
 MyColor = None # random, or edit this with your color (cf. "My color is (181, 74, 0)")
 LocalColor = None # will be MyColor unless you change it in setup()
