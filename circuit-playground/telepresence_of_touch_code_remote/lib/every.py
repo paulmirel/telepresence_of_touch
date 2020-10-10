@@ -21,7 +21,6 @@ class Every(object):
         # Make an instance.
         #   :interval in seconds
 
-        # states are -1,0,1
         self.interval = interval
         self.last = time.monotonic() - interval # start immediatly
 

@@ -9,25 +9,22 @@
 #       MemoryError: memory allocation failed
 # then just re-send the code.py, or reset the CPE
 
+import gc
 import time
 import random
-import gc
 
-gc.collect()
 from adafruit_circuitplayground import cp
-gc.collect()
-from every import Every
-gc.collect()
-from mqtt_serial import SerialMQTT
-gc.collect()
+from every import Every # 400b
+from mqtt_serial import SerialMQTT # 2.5k
+print("Free memory Seerilmqtt",gc.mem_free()) # ~ 8320
 
 ###
 ## Constants!
 
 # your initials
-Me='ANONx' # EDIT ME with your initials or something short
+Me='awg' # EDIT ME with your initials or something short
 
-MyColor = None # random, or edit this with your color (cf. "My color is (181, 74, 0)")
+MyColor = (5,5,8) # random, or edit this with your color (cf. "My color is (181, 74, 0)")
 LocalColor = None # will be MyColor unless you change it in setup()
 RemoteColor = None # will be MyColor unless you change it in setup()
 
@@ -116,7 +113,8 @@ def loop():
     if mqtt_incoming_message:
         handle_mqtt_message(topic, mqtt_incoming_message)
     elif other_message:
-        print("Not understood:", other_message)
+        #print("Not understood:", other_message)
+        pass
 
     # We can send a message(s) once, as soon as we connect
     if Mqtt.is_connected() and FirstTime:
@@ -223,7 +221,7 @@ def handle_mqtt_message(topic, mqtt_message):
 
         # make sure it's a dict!
         if ( not isinstance(value, dict) ):
-            print("debugmqtt: 'touch' wasn't an dict:",value)
+            #print("debugmqtt: 'touch' wasn't an dict:",value)
             return
 
         # we could make decisions based on the value['from']
@@ -240,7 +238,8 @@ def handle_mqtt_message(topic, mqtt_message):
             elif isinstance(color,tuple) or isinstance(color,list):
                 cp.pixels[ remote_to_local[which] ] = color # ignore their color
             else:
-                print("debugmqtt: expected the 'color' to be a tuple/list, saw", color.__class__.__name__,color)
+                #print("debugmqtt: expected the 'color' to be a tuple/list, saw", color.__class__.__name__,color)
+                pass
 
 ### 
 setup()
