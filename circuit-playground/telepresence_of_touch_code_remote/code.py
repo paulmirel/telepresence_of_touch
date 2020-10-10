@@ -11,11 +11,12 @@
 
 import gc
 import time
-import random
 
 from adafruit_circuitplayground import cp
+
 from unrvl.every import Every # 400b
 from unrvl.mqtt_serial import SerialMQTT # 2.5k
+from unrvl.random_color import seed_the_random, random_color
 #print("Free memory Seerilmqtt",gc.mem_free()) # ~ 8320
 
 ###
@@ -24,7 +25,7 @@ from unrvl.mqtt_serial import SerialMQTT # 2.5k
 # your initials
 Me='awg' # EDIT ME with your initials or something short
 
-MyColor = (5,5,8) # random, or edit this with your color (cf. "My color is (181, 74, 0)")
+MyColor = None # random, or edit this with your color (cf. "My color is (181, 74, 0)")
 LocalColor = None # will be MyColor unless you change it in setup()
 RemoteColor = None # will be MyColor unless you change it in setup()
 
@@ -121,15 +122,6 @@ def loop():
         Mqtt.publish(MQTTPublishTo, { "from" : Me, "message" : "hello"} )
         FirstTime = False # we did it, not first-time anymore
 
-def seed_the_random():
-    # seed the random generator, random.seed(x) doesn't actually change much!
-    # But, getting N randoms, if N is noise, works
-    seed = cp.light + cp.temperature + time.monotonic()
-    seed = (seed - int(seed)) * 100
-    random.seed(int(seed))
-    for i in range(seed % 100):
-        random.random()
-
 def update_touch(mqtt_message):
     # fill in the message to correspond to our touch
     global LastTouchPart
@@ -183,23 +175,6 @@ def update_touch(mqtt_message):
         mqtt_message['touch'] = touch_part
         LastTouchPart = touch_part # remember for next time
     gc.collect()
-
-def random_color():
-    # pick a random color, but near the rim of the color wheel (high saturation/value)
-    rg_or_b = random.uniform(1,3.99)
-    if rg_or_b >= 3:
-        blue = int(255 * (rg_or_b - 3))
-        green = 255 - blue
-        red = 0
-    elif rg_or_b >= 2:
-        green = int(255 * (rg_or_b - 2))
-        blue = 255 - green
-        red = 0
-    else:
-        red = int(255 * (rg_or_b - 1))
-        green = 255 - red
-        blue = 0
-    return (red,green,blue)
 
 def handle_mqtt_message(topic, mqtt_message):
     # See if there is an incomming message
