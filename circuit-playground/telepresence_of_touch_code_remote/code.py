@@ -188,32 +188,43 @@ def handle_mqtt_message(topic, mqtt_message):
 
     # We could make decisions about what to do based on the topic...
 
+    # We could look for different parts of the message ("shake" maybe?)
+
     # A "touch" message looks like:
     # { touch" : { 1 : [0,255,0], 2: [255,0,0], 3:[0,0,0] }
     # i.e. which "touch" and the requested color
     if "touch" in mqtt_message:
-        value = mqtt_message["touch"]
+        remote_touch = mqtt_message["touch"]
 
         # make sure it's a dict!
-        if ( not isinstance(value, dict) ):
-            #print("debugmqtt: 'touch' wasn't an dict:",value)
+        if ( not isinstance(remote_touch, dict) ):
+            #print("debugmqtt: 'touch' wasn't an dict:",remote_touch)
             return
 
-        # we could make decisions based on the value['from']
+        # we could make decisions based on the remote_touch['from']
     
-        # But, just show the touch
+        # But, just show the touch, just copy their color (on or off)
 
         #print("Touch! ")
-        remote_to_local = [ 0, 2, 4, 5, 7 ] # map of touch number to local led number (unused)
 
-        for which, color in value.items():
-            #print('remote', which, 'to', remote_to_local[which],color)
-            if color == (0,0,0):
-                cp.pixels[ remote_to_local[which] ] = OFF
-            elif isinstance(color,tuple) or isinstance(color,list):
-                cp.pixels[ remote_to_local[which] ] = color # ignore their color
+        # Look at each pixel : color in {4: (0, 0, 0), 1: (0, 0, 0), 2: (0, 0, 0), 3: (0, 9, 246)}
+        for remote_pixel, remote_color in remote_touch.items():
+            #print('remote', remote_pixel, 'to', remote_to_local[remote_pixel],remote_color)
+
+            # we could make decisions based on the remote_pixel here
+
+            # Safety check, is it a color?
+            if isinstance(remote_color,tuple) or isinstance(remote_color,list):
+                # since the code is identical, their pixel would == our touch pixel,
+                # so show their touch as a different pixel
+                # i.e. the next one "+ 1"
+                cp.pixels[ remote_pixel + 1 ] = remote_color
+
+                # we could have decided on different colors
+                # or different behavior depending on the pixel
+
             else:
-                #print("debugmqtt: expected the 'color' to be a tuple/list, saw", color.__class__.__name__,color)
+                #print("debugmqtt: expected the 'color' to be a tuple/list, saw", remote_color.__class__.__name__,color)
                 pass
 
 ### 
