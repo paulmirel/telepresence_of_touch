@@ -3,12 +3,22 @@
 # 
 # usage:
 # 
-# from mqtt_serial import SerialMQTT
+# from unrvl.mqtt_serial import SerialMQTT 
+#
 # mqtt = SerialMQTT("mqtt://some.host:port")
-# mqtt.connect()
+# mqtt.subscribe(topic) # repeat for every topic of interest
 # 
 # while(True):
-#     mqtt.run()
+#    mqtt.run()
+#
+#    if you-have-a-message-to-send:
+#      mqtt.publish(topic, mqtt_message)
+#
+#    other_message, topic, mqtt_incoming_message = mqtt.receive_message()
+#    if mqtt_incoming_message:
+#        react-somehow-to( topic, mqtt_incoming_message)
+#    else
+#        react-somehow-to( other_message ) # some text from the serial port
 
 import supervisor
 import sys

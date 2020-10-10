@@ -14,10 +14,10 @@ import time
 
 from adafruit_circuitplayground import cp
 
-from unrvl.every import Every # 400b
-from unrvl.mqtt_serial import SerialMQTT # 2.5k
+from unrvl.every import Every
+from unrvl.mqtt_serial import SerialMQTT
 from unrvl.random_color import seed_the_random, random_color
-#print("Free memory Seerilmqtt",gc.mem_free()) # ~ 8320
+#print("Free memory Seerilmqtt",gc.mem_free())
 
 ###
 ## Constants!
