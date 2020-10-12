@@ -29,7 +29,7 @@ MyColor = None # random, or edit this with your color (cf. "My color is (181, 74
 LocalColor = None # will be MyColor unless you change it in setup()
 RemoteColor = None # will be MyColor unless you change it in setup()
 
-MQTTServer = "mqtt://f557f2ed:e8f599a52aae3773@broker.shiftr.io"
+MQTTServer = "mqtt://405f745d:ceabf9538a9619ff@broker.shiftr.io"
 
 # Send touch messages to topic:
 MQTTPublishTo = 'unrvl2020x/touch/everyone' # # "unrvl2020/shake-group1"
